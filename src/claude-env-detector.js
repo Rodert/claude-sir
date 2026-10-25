@@ -100,12 +100,14 @@
       rerun: "重新检测",
       close: "关闭检测结果",
       pass: "满分通过",
-      fail: "未通过",
+      fail: "检测完成",
       passDetail: "六项环境信号均达到满分。",
-      failDetail: "检测未达到 100 分。",
+      failDetail: "六项环境信号已全部检测完成。",
       passAlt: "机器人举起蓝旗，表示满分通过",
-      failAlt: "机器人举起红旗，表示未通过",
+      failAlt: "机器人举起红旗，表示检测完成",
+      scanStates: { pending: "等待", active: "检测中", done: "完成" },
       turbineLabel: "旋转的三维检测涡轮",
+      scanItemsLabel: "检测项目与状态",
       reportTitle: "环境信号检测报告",
       reportFooter: "开源环境信号检测"
     },
@@ -148,12 +150,14 @@
       rerun: "Scan again",
       close: "Close result",
       pass: "Full-score pass",
-      fail: "Not passed",
+      fail: "Scan complete",
       passDetail: "All six environment signals reached full score.",
-      failDetail: "The result did not reach 100 points.",
+      failDetail: "All six environment signals have been checked.",
       passAlt: "Robot holding a blue flag for a full-score pass",
-      failAlt: "Robot holding a red flag for a result below full score",
+      failAlt: "Robot holding a red flag after the scan completes",
+      scanStates: { pending: "Waiting", active: "Checking", done: "Complete" },
       turbineLabel: "Rotating 3D scan turbine",
+      scanItemsLabel: "Scan items and status",
       reportTitle: "Environment Signal Report",
       reportFooter: "Open-source environment signal detector"
     }
@@ -274,6 +278,64 @@
         gap: 8px 16px;
         pointer-events: none;
       }
+      .scan-items {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        z-index: 2;
+        width: min(270px, calc(100% - 32px));
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--detector-line);
+        background: rgba(255, 255, 255, .88);
+        list-style: none;
+        backdrop-filter: blur(7px);
+      }
+      .scan-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        min-height: 42px;
+        padding: 7px 10px;
+        color: var(--detector-muted);
+        font-size: 9px;
+      }
+      .scan-item + .scan-item { border-top: 1px solid var(--detector-line); }
+      .scan-item-copy { display: grid; gap: 2px; min-width: 0; }
+      .scan-item-name { color: var(--detector-text); font-size: 10px; }
+      .scan-item-source { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .scan-item-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .scan-item-state::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border: 1px solid var(--detector-line);
+        background: var(--detector-surface);
+      }
+      .scan-item[data-state="active"] {
+        background: rgba(217, 119, 87, .08);
+      }
+      .scan-item[data-state="active"] .scan-item-state {
+        color: var(--detector-accent);
+        font-weight: 700;
+      }
+      .scan-item[data-state="active"] .scan-item-state::before {
+        border-color: var(--detector-accent);
+        background: var(--detector-accent);
+        animation: scan-pulse 700ms ease-in-out infinite alternate;
+      }
+      .scan-item[data-state="done"] .scan-item-state { color: var(--detector-text); }
+      .scan-item[data-state="done"] .scan-item-state::before {
+        border-color: var(--detector-accent);
+        background: var(--detector-accent);
+      }
+      @keyframes scan-pulse { to { opacity: .28; } }
       .scan-label { font-size: 11px; font-weight: 700; }
       .scan-count {
         color: var(--detector-accent);
@@ -542,7 +604,9 @@
         font-size: 10px;
       }
       @media (max-width: 440px) {
-        .scan-stage { height: 340px; }
+        .scan-stage { height: 430px; }
+        .scan-items { width: calc(100% - 32px); }
+        .scan-item { min-height: 39px; }
         .summary { display: block; }
         .score-wrap { border-right: 0; border-bottom: 1px solid var(--detector-line); }
         .signal {
@@ -558,6 +622,7 @@
       @media (prefers-reduced-motion: reduce) {
         .rail span, .scan-progress span { transition: none; }
         .fallback-rotor { animation: none; }
+        .scan-item[data-state="active"] .scan-item-state::before { animation: none; }
         .verdict, .verdict-card { transition: none; }
       }
     </style>
@@ -577,6 +642,7 @@
       <div class="scan-stage" part="scan-stage" aria-live="polite">
         <canvas class="scan-canvas" aria-label="旋转的三维检测涡轮"></canvas>
         <div class="fallback-rotor" aria-hidden="true"></div>
+        <ol class="scan-items" aria-label="检测项目"></ol>
         <div class="scan-hud">
           <span class="scan-label">准备检测</span>
           <span class="scan-count">00 / 06</span>
@@ -660,6 +726,7 @@
       this._panel = this.shadowRoot.querySelector(".panel");
       this._stage = this.shadowRoot.querySelector(".scan-stage");
       this._canvas = this.shadowRoot.querySelector(".scan-canvas");
+      this._scanItems = this.shadowRoot.querySelector(".scan-items");
       this._button = this.shadowRoot.querySelector(".run-button");
       this._shareButton = this.shadowRoot.querySelector(".share-button");
       this._shareLabel = this.shadowRoot.querySelector(".share-label");
@@ -669,6 +736,8 @@
       this._verdictClose = this.shadowRoot.querySelector(".verdict-close");
       this._verdictTimer = 0;
       this._sharePending = false;
+      this._scanReport = null;
+      this._scanIndex = -1;
       this._onKeyDown = (event) => {
         if (event.key === "Escape" && !this._verdict.hidden) this._hideVerdict();
       };
@@ -745,6 +814,7 @@
         item.textContent = copy.privacy[index];
       });
       this._canvas.setAttribute("aria-label", copy.turbineLabel);
+      this._scanItems.setAttribute("aria-label", copy.scanItemsLabel);
       this.shadowRoot.querySelector(".note").textContent = copy.note;
       this._verdictClose.setAttribute("aria-label", copy.close);
       this._verdictClose.title = copy.close;
@@ -759,6 +829,9 @@
         this.shadowRoot.querySelector(".band").textContent = copy.notTested;
         this.shadowRoot.querySelector(".description").textContent = copy.initialDescription;
         this.shadowRoot.querySelector(".scan-label").textContent = copy.ready;
+      }
+      if (this._panel.hasAttribute("data-scanning") && this._scanReport) {
+        this._renderScanItems(this._scanReport, this._scanIndex);
       }
     }
 
@@ -832,6 +905,9 @@
       this._setProgress(COPY[this.locale].ready, 0, 6);
 
       const report = root.ClaudeDetector.detectEnvironment();
+      this._scanReport = report;
+      this._scanIndex = -1;
+      this._renderScanItems(report, this._scanIndex);
       try {
         const THREE = await loadThree();
         this._startTurbine(THREE);
@@ -841,19 +917,25 @@
 
       for (let index = 0; index < report.signals.length; index += 1) {
         const signal = report.signals[index];
+        this._scanIndex = index;
+        this._renderScanItems(report, index);
         this._setProgress(
           COPY[this.locale].reading(this._localizedSignalLabel(signal)),
           index + 1,
           report.signals.length
         );
-        await wait(240);
+        await wait(650);
       }
+      this._scanIndex = report.signals.length;
+      this._renderScanItems(report, this._scanIndex);
       this._setProgress(COPY[this.locale].calculating, report.signals.length, report.signals.length);
-      await wait(360);
+      await wait(900);
 
       this._stopTurbine();
       this._panel.removeAttribute("data-scanning");
       this._report = report;
+      this._scanReport = null;
+      this._scanIndex = -1;
       this._render(report);
       this._showVerdict(report);
       this._button.disabled = false;
@@ -914,6 +996,35 @@
       this._verdict.setAttribute("data-closing", "");
       this._verdict.removeAttribute("data-open");
       this._verdictTimer = root.setTimeout(finish, 340);
+    }
+
+    _renderScanItems(report, activeIndex) {
+      const copy = COPY[this.locale];
+      this._scanItems.replaceChildren();
+      report.signals.forEach((signal, index) => {
+        const state = index < activeIndex
+          ? "done"
+          : index === activeIndex ? "active" : "pending";
+        const item = document.createElement("li");
+        item.className = "scan-item";
+        item.dataset.state = state;
+
+        const itemCopy = document.createElement("span");
+        itemCopy.className = "scan-item-copy";
+        const name = document.createElement("strong");
+        name.className = "scan-item-name";
+        name.textContent = this._localizedSignalLabel(signal);
+        const source = document.createElement("span");
+        source.className = "scan-item-source";
+        source.textContent = signal.source;
+        itemCopy.append(name, source);
+
+        const status = document.createElement("span");
+        status.className = "scan-item-state";
+        status.textContent = copy.scanStates[state];
+        item.append(itemCopy, status);
+        this._scanItems.appendChild(item);
+      });
     }
 
     _setProgress(label, current, total) {
