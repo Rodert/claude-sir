@@ -60,20 +60,123 @@
     return `${output}...`;
   }
 
+  const COPY = {
+    zh: {
+      panelLabel: "Claude 环境信号检测",
+      title: "环境信号检测",
+      languageLabel: "界面语言",
+      privacyLabel: "隐私与开放性说明",
+      privacy: ["浏览器内执行", "不上传数据", "开源代码"],
+      ready: "准备检测",
+      reading: (label) => `正在读取：${label}`,
+      calculating: "正在计算评分",
+      notTested: "尚未检测",
+      initialDescription: "读取浏览器可见的六项环境数据，不调用 Claude。",
+      descriptions: {
+        low: "当前浏览器暴露的中国地区相关信号较少。",
+        medium: "当前浏览器暴露了部分中国地区相关信号。",
+        high: "当前浏览器暴露了较多中国地区相关信号。"
+      },
+      bands: { low: "低相关", medium: "中等相关", high: "高相关" },
+      signals: {
+        timezone: "系统时区",
+        language: "浏览器语言",
+        fonts: "中文字体",
+        locale: "Intl 区域",
+        offset: "UTC 偏移",
+        platform: "平台线索"
+      },
+      values: {
+        unknown: "未知",
+        none: "未发现",
+        unavailable: "不可用",
+        "canvas unavailable": "Canvas 不可用"
+      },
+      note: "本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。",
+      share: "分享结果",
+      generating: "生成中",
+      start: "开始检测",
+      scanning: "检测中",
+      rerun: "重新检测",
+      close: "关闭检测结果",
+      pass: "满分通过",
+      fail: "未通过",
+      passDetail: "六项环境信号均达到满分。",
+      failDetail: "检测未达到 100 分。",
+      passAlt: "机器人举起蓝旗，表示满分通过",
+      failAlt: "机器人举起红旗，表示未通过",
+      turbineLabel: "旋转的三维检测涡轮",
+      reportTitle: "环境信号检测报告",
+      reportFooter: "开源环境信号检测"
+    },
+    en: {
+      panelLabel: "Claude environment signal detector",
+      title: "Environment Signal Detector",
+      languageLabel: "Interface language",
+      privacyLabel: "Privacy and source information",
+      privacy: ["Runs in your browser", "No data uploaded", "Open-source code"],
+      ready: "Ready to scan",
+      reading: (label) => `Reading: ${label}`,
+      calculating: "Calculating score",
+      notTested: "Not tested",
+      initialDescription: "Reads six browser-visible environment signals without calling Claude.",
+      descriptions: {
+        low: "This browser exposes few signals associated with China.",
+        medium: "This browser exposes some signals associated with China.",
+        high: "This browser exposes many signals associated with China."
+      },
+      bands: { low: "Low correlation", medium: "Medium correlation", high: "High correlation" },
+      signals: {
+        timezone: "System timezone",
+        language: "Browser languages",
+        fonts: "Chinese fonts",
+        locale: "Intl locale",
+        offset: "UTC offset",
+        platform: "Platform signal"
+      },
+      values: {
+        unknown: "Unknown",
+        none: "None found",
+        unavailable: "Unavailable",
+        "canvas unavailable": "Canvas unavailable"
+      },
+      note: "This estimate is based on public information and browser-visible signals. It is for reference only and is not an official Claude determination. Feedback is welcome when results differ.",
+      share: "Share result",
+      generating: "Generating",
+      start: "Start scan",
+      scanning: "Scanning",
+      rerun: "Scan again",
+      close: "Close result",
+      pass: "Full-score pass",
+      fail: "Not passed",
+      passDetail: "All six environment signals reached full score.",
+      failDetail: "The result did not reach 100 points.",
+      passAlt: "Robot holding a blue flag for a full-score pass",
+      failAlt: "Robot holding a red flag for a result below full score",
+      turbineLabel: "Rotating 3D scan turbine",
+      reportTitle: "Environment Signal Report",
+      reportFooter: "Open-source environment signal detector"
+    }
+  };
+
+  function normalizeLocale(value) {
+    return String(value || "zh").toLowerCase().startsWith("en") ? "en" : "zh";
+  }
+
   const template = document.createElement("template");
   template.innerHTML = `
     <style>
       :host {
-        --detector-bg: #06111f;
-        --detector-surface: #0b1f33;
-        --detector-line: #24496b;
-        --detector-text: #f5f1ea;
-        --detector-muted: #8ea5bc;
+        --detector-bg: #f7f7f8;
+        --detector-surface: #ffffff;
+        --detector-line: #d7d9de;
+        --detector-text: #1b2028;
+        --detector-muted: #667085;
         --detector-accent: #d97757;
         --detector-blue: #2f7df6;
         display: block;
         color: var(--detector-text);
-        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
         letter-spacing: 0;
       }
       * { box-sizing: border-box; }
@@ -85,11 +188,35 @@
       }
       .header, .summary, .signal, .footer { display: flex; align-items: center; }
       .header {
+        justify-content: space-between;
+        gap: 16px;
         min-height: 48px;
         padding: 0 16px;
         border-bottom: 1px solid var(--detector-line);
         font-size: 12px;
         font-weight: 700;
+      }
+      .locale-switch {
+        display: inline-grid;
+        grid-template-columns: repeat(2, 1fr);
+        border: 1px solid var(--detector-line);
+      }
+      .locale-button {
+        min-width: 45px;
+        height: 28px;
+        padding: 0 9px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: var(--detector-muted);
+        font: inherit;
+        font-size: 9px;
+        cursor: pointer;
+      }
+      .locale-button + .locale-button { border-left: 1px solid var(--detector-line); }
+      .locale-button[aria-pressed="true"] {
+        background: var(--detector-accent);
+        color: #ffffff;
       }
       .privacy-bar {
         display: grid;
@@ -261,11 +388,11 @@
         align-items: center;
         justify-content: center;
         gap: 9px;
-        border: 1px solid var(--detector-blue);
+        border: 1px solid var(--detector-accent);
         background: transparent;
-        color: var(--detector-blue);
+        color: var(--detector-accent);
       }
-      .share-button:hover { background: var(--detector-blue); color: var(--detector-text); }
+      .share-button:hover { background: var(--detector-accent); color: #ffffff; }
       .download-icon {
         position: relative;
         width: 12px;
@@ -306,7 +433,7 @@
         min-height: 100%;
         padding: 24px;
         overflow: hidden;
-        background: rgba(6, 17, 31, .84);
+        background: rgba(247, 247, 248, .88);
         backdrop-filter: blur(8px);
         opacity: 0;
         transition: opacity 220ms ease;
@@ -318,10 +445,7 @@
         width: min(430px, 100%);
         border: 1px solid var(--verdict-color, var(--detector-accent));
         background: var(--detector-surface);
-        box-shadow:
-          0 0 0 1px rgba(6, 17, 31, .8),
-          0 24px 70px rgba(0, 0, 0, .55),
-          0 0 44px var(--verdict-glow, rgba(217, 119, 87, .22));
+        box-shadow: 0 18px 48px rgba(27, 32, 40, .16);
         transform: translateY(72px) scale(.72);
         transform-origin: 50% 100%;
         opacity: 0;
@@ -341,7 +465,6 @@
       }
       .verdict[data-pass] {
         --verdict-color: var(--detector-blue);
-        --verdict-glow: rgba(47, 125, 246, .3);
       }
       .verdict-image-wrap {
         position: relative;
@@ -362,7 +485,7 @@
         background: repeating-linear-gradient(
           0deg,
           transparent 0 5px,
-          rgba(6, 17, 31, .035) 5px 6px
+          rgba(27, 32, 40, .035) 5px 6px
         );
       }
       .verdict-close {
@@ -375,7 +498,7 @@
         padding: 0;
         border: 1px solid rgba(245, 241, 234, .6);
         border-radius: 0;
-        background: rgba(6, 17, 31, .9);
+        background: rgba(255, 255, 255, .94);
         color: var(--detector-text);
         cursor: pointer;
       }
@@ -440,7 +563,11 @@
     </style>
     <section class="panel" part="panel" aria-label="Claude 环境信号检测">
       <header class="header" part="header">
-        <span>环境信号检测</span>
+        <span class="header-title">环境信号检测</span>
+        <div class="locale-switch" role="group" aria-label="界面语言">
+          <button class="locale-button" type="button" data-locale="zh" aria-pressed="true">中文</button>
+          <button class="locale-button" type="button" data-locale="en" aria-pressed="false">EN</button>
+        </div>
       </header>
       <div class="privacy-bar" part="privacy" aria-label="隐私与开放性说明">
         <span>浏览器内执行</span>
@@ -518,6 +645,10 @@
   }
 
   class ClaudeEnvDetector extends HTMLElement {
+    static get observedAttributes() {
+      return ["locale"];
+    }
+
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
@@ -532,6 +663,7 @@
       this._button = this.shadowRoot.querySelector(".run-button");
       this._shareButton = this.shadowRoot.querySelector(".share-button");
       this._shareLabel = this.shadowRoot.querySelector(".share-label");
+      this._localeButtons = Array.from(this.shadowRoot.querySelectorAll(".locale-button"));
       this._verdict = this.shadowRoot.querySelector(".verdict");
       this._verdictImage = this.shadowRoot.querySelector(".verdict-image");
       this._verdictClose = this.shadowRoot.querySelector(".verdict-close");
@@ -542,10 +674,29 @@
       };
       this._button.addEventListener("click", () => this.run());
       this._shareButton.addEventListener("click", () => this.downloadResult());
+      this._localeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const locale = button.dataset.locale;
+          if (locale === this.locale) return;
+          this.setAttribute("locale", locale);
+          this.dispatchEvent(new CustomEvent("claude-env-locale", {
+            detail: { locale },
+            bubbles: true,
+            composed: true
+          }));
+        });
+      });
       this._verdictClose.addEventListener("click", () => this._hideVerdict());
       this._verdict.addEventListener("click", (event) => {
         if (event.target === this._verdict) this._hideVerdict();
       });
+      this._applyLocale();
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+      if (name === "locale" && oldValue !== newValue && this.shadowRoot) {
+        this._applyLocale();
+      }
     }
 
     connectedCallback() {
@@ -561,6 +712,14 @@
       return this._report;
     }
 
+    get locale() {
+      return normalizeLocale(this.getAttribute("locale"));
+    }
+
+    set locale(value) {
+      this.setAttribute("locale", normalizeLocale(value));
+    }
+
     run() {
       if (this._pending) return this._pending;
       this._pending = this._execute().finally(() => {
@@ -569,11 +728,53 @@
       return this._pending;
     }
 
+    _applyLocale() {
+      const locale = this.locale;
+      const copy = COPY[locale];
+      this.lang = locale === "zh" ? "zh-CN" : "en";
+      this._panel.setAttribute("aria-label", copy.panelLabel);
+      this.shadowRoot.querySelector(".header-title").textContent = copy.title;
+      const switcher = this.shadowRoot.querySelector(".locale-switch");
+      switcher.setAttribute("aria-label", copy.languageLabel);
+      this._localeButtons.forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.locale === locale));
+      });
+      const privacyBar = this.shadowRoot.querySelector(".privacy-bar");
+      privacyBar.setAttribute("aria-label", copy.privacyLabel);
+      Array.from(privacyBar.children).forEach((item, index) => {
+        item.textContent = copy.privacy[index];
+      });
+      this._canvas.setAttribute("aria-label", copy.turbineLabel);
+      this.shadowRoot.querySelector(".note").textContent = copy.note;
+      this._verdictClose.setAttribute("aria-label", copy.close);
+      this._verdictClose.title = copy.close;
+      this._shareLabel.textContent = this._sharePending ? copy.generating : copy.share;
+      this._button.textContent = this._panel.hasAttribute("data-scanning")
+        ? copy.scanning
+        : this._report ? copy.rerun : copy.start;
+      if (this._report) {
+        this._render(this._report);
+        if (!this._verdict.hidden) this._updateVerdict(this._report);
+      } else {
+        this.shadowRoot.querySelector(".band").textContent = copy.notTested;
+        this.shadowRoot.querySelector(".description").textContent = copy.initialDescription;
+        this.shadowRoot.querySelector(".scan-label").textContent = copy.ready;
+      }
+    }
+
+    _localizedSignalLabel(signal) {
+      return COPY[this.locale].signals[signal.id] || signal.label;
+    }
+
+    _localizedSignalValue(value) {
+      return COPY[this.locale].values[String(value).toLowerCase()] || value;
+    }
+
     async downloadResult() {
       if (!this._report || this._sharePending) return null;
       this._sharePending = true;
       this._shareButton.disabled = true;
-      this._shareLabel.textContent = "生成中";
+      this._shareLabel.textContent = COPY[this.locale].generating;
       try {
         const report = this._report;
         const passed = report.score === 100;
@@ -614,7 +815,7 @@
       } finally {
         this._sharePending = false;
         this._shareButton.disabled = false;
-        this._shareLabel.textContent = "分享结果";
+        this._shareLabel.textContent = COPY[this.locale].share;
       }
     }
 
@@ -625,10 +826,10 @@
       this._hideVerdict(true);
       this._button.disabled = true;
       this._shareButton.disabled = true;
-      this._button.textContent = "检测中";
+      this._button.textContent = COPY[this.locale].scanning;
       this._panel.setAttribute("data-scanning", "");
       this._stage.removeAttribute("data-webgl");
-      this._setProgress("准备检测", 0, 6);
+      this._setProgress(COPY[this.locale].ready, 0, 6);
 
       const report = root.ClaudeDetector.detectEnvironment();
       try {
@@ -640,10 +841,14 @@
 
       for (let index = 0; index < report.signals.length; index += 1) {
         const signal = report.signals[index];
-        this._setProgress(`正在读取：${signal.label}`, index + 1, report.signals.length);
+        this._setProgress(
+          COPY[this.locale].reading(this._localizedSignalLabel(signal)),
+          index + 1,
+          report.signals.length
+        );
         await wait(240);
       }
-      this._setProgress("正在计算评分", report.signals.length, report.signals.length);
+      this._setProgress(COPY[this.locale].calculating, report.signals.length, report.signals.length);
       await wait(360);
 
       this._stopTurbine();
@@ -653,7 +858,7 @@
       this._showVerdict(report);
       this._button.disabled = false;
       this._shareButton.disabled = false;
-      this._button.textContent = "重新检测";
+      this._button.textContent = COPY[this.locale].rerun;
       this.dispatchEvent(new CustomEvent("claude-env-result", {
         detail: report,
         bubbles: true,
@@ -669,16 +874,7 @@
         : this.getAttribute("red-robot-src") || redRobotUrl;
       root.clearTimeout(this._verdictTimer);
       this._verdictImage.src = source;
-      this._verdictImage.alt = passed
-        ? "机器人举起蓝旗，表示满分通过"
-        : "机器人举起红旗，表示未通过";
-      this.shadowRoot.querySelector(".verdict-title").textContent =
-        passed ? "满分通过" : "未通过";
-      this.shadowRoot.querySelector(".verdict-score").textContent =
-        `${report.score}/100`;
-      this.shadowRoot.querySelector(".verdict-detail").textContent = passed
-        ? "六项环境信号均达到满分。"
-        : "检测未达到 100 分。";
+      this._updateVerdict(report);
       this._verdict.toggleAttribute("data-pass", passed);
       this._verdict.removeAttribute("data-closing");
       this._verdict.hidden = false;
@@ -687,6 +883,19 @@
         this._verdict.setAttribute("data-open", "");
         this._verdictClose.focus({ preventScroll: true });
       });
+    }
+
+    _updateVerdict(report) {
+      const copy = COPY[this.locale];
+      const passed = report.score === 100;
+      this._verdictImage.alt = passed ? copy.passAlt : copy.failAlt;
+      this.shadowRoot.querySelector(".verdict-title").textContent =
+        passed ? copy.pass : copy.fail;
+      this.shadowRoot.querySelector(".verdict-score").textContent =
+        `${report.score}/100`;
+      this.shadowRoot.querySelector(".verdict-detail").textContent = passed
+        ? copy.passDetail
+        : copy.failDetail;
     }
 
     _hideVerdict(immediate) {
@@ -862,17 +1071,18 @@
       const color = (name, fallback) =>
         styles.getPropertyValue(name).trim() || fallback;
       const colors = {
-        bg: color("--detector-bg", "#06111f"),
-        surface: color("--detector-surface", "#0b1f33"),
-        line: color("--detector-line", "#24496b"),
-        text: color("--detector-text", "#f5f1ea"),
-        muted: color("--detector-muted", "#8ea5bc"),
+        bg: color("--detector-bg", "#f7f7f8"),
+        surface: color("--detector-surface", "#ffffff"),
+        line: color("--detector-line", "#d7d9de"),
+        text: color("--detector-text", "#1b2028"),
+        muted: color("--detector-muted", "#667085"),
         accent: color("--detector-accent", "#d97757"),
         blue: color("--detector-blue", "#2f7df6")
       };
+      const copy = COPY[this.locale];
       const passed = report.score === 100;
       const signalColor = passed ? colors.blue : colors.accent;
-      const mono = '"SFMono-Regular", Consolas, "Liberation Mono", monospace';
+      const face = '"Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
       const innerWidth = width - margin * 2;
       const contentLeft = margin + 26;
       const contentRight = width - margin - 26;
@@ -885,7 +1095,7 @@
         context.stroke();
       };
       const drawText = (value, x, y, size, fill, weight, align) => {
-        context.font = `${weight || 400} ${size}px ${mono}`;
+        context.font = `${weight || 400} ${size}px ${face}`;
         context.fillStyle = fill || colors.text;
         context.textAlign = align || "left";
         context.textBaseline = "alphabetic";
@@ -934,13 +1144,16 @@
       let measuredAt = "";
       const measuredDate = new Date(report.measuredAt || "");
       if (!Number.isNaN(measuredDate.getTime())) {
-        measuredAt = measuredDate.toLocaleString("zh-CN", { hour12: false });
+        measuredAt = measuredDate.toLocaleString(
+          this.locale === "zh" ? "zh-CN" : "en-US",
+          { hour12: false }
+        );
       }
       drawText(measuredAt, contentRight, margin + 58, 18, colors.muted, 400, "right");
       drawLine(margin, headerBottom, width - margin, headerBottom, 2);
 
       const privacyBottom = headerBottom + privacyHeight;
-      const privacyLabels = ["浏览器内执行", "不上传数据", "开源代码"];
+      const privacyLabels = copy.privacy;
       const privacyCellWidth = innerWidth / privacyLabels.length;
       privacyLabels.forEach((label, index) => {
         const cellLeft = margin + index * privacyCellWidth;
@@ -960,11 +1173,11 @@
       const summaryBottom = privacyBottom + summaryHeight;
       context.fillStyle = colors.surface;
       context.fillRect(margin, privacyBottom, innerWidth, summaryHeight);
-      drawText("环境信号检测报告", contentLeft, privacyBottom + 60, 24, colors.text, 700);
+      drawText(copy.reportTitle, contentLeft, privacyBottom + 60, 24, colors.text, 700);
       drawText(String(report.score).padStart(2, "0"), contentLeft, privacyBottom + 218, 144, signalColor, 700);
       drawText("/100", contentLeft + 345, privacyBottom + 216, 28, colors.muted, 400);
-      drawText(report.band.label, contentLeft, privacyBottom + 286, 27, colors.text, 700);
-      drawText(passed ? "满分通过" : "未通过", contentLeft + 180, privacyBottom + 286, 24, signalColor, 700);
+      drawText(copy.bands[report.band.id] || report.band.label, contentLeft, privacyBottom + 286, 27, colors.text, 700);
+      drawText(passed ? copy.pass : copy.fail, contentLeft + 400, privacyBottom + 286, 24, signalColor, 700);
       context.fillStyle = colors.line;
       context.fillRect(contentLeft, privacyBottom + 324, 600, 5);
       context.fillStyle = signalColor;
@@ -979,7 +1192,7 @@
         context.drawImage(robot, robotX, robotY, robotSize, robotSize);
       } else {
         drawText(
-          passed ? "满分通过" : "未通过",
+          passed ? copy.pass : copy.fail,
           robotX + robotSize / 2,
           robotY + robotSize / 2 + 10,
           28,
@@ -998,11 +1211,11 @@
         const rowBottom = rowTop + rowHeight;
         const valueX = margin + 390;
         const pointsX = width - margin - 132;
-        drawText(signal.label, contentLeft, rowTop + 44, 22, colors.text, 700);
+        drawText(this._localizedSignalLabel(signal), contentLeft, rowTop + 44, 22, colors.text, 700);
         drawText(signal.source, contentLeft, rowTop + 78, 16, colors.muted, 400);
-        context.font = `400 18px ${mono}`;
+        context.font = `400 18px ${face}`;
         drawText(
-          fitText(context, signal.value, pointsX - valueX - 42),
+          fitText(context, this._localizedSignalValue(signal.value), pointsX - valueX - 42),
           valueX + 26,
           rowTop + 64,
           18,
@@ -1016,33 +1229,30 @@
       });
 
       const footerTop = summaryBottom + rowsHeight;
-      context.font = `400 18px ${mono}`;
+      context.font = `400 18px ${face}`;
       context.fillStyle = colors.muted;
       context.textAlign = "left";
       drawWrappedText(
-        "本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。",
+        copy.note,
         contentLeft,
         footerTop + 57,
         innerWidth - 52,
         30,
         2
       );
-      drawText("开源环境信号检测", contentLeft, footerTop + 137, 17, colors.muted, 400);
+      drawText(copy.reportFooter, contentLeft, footerTop + 137, 17, colors.muted, 400);
       drawText(`${report.score}/100`, contentRight, footerTop + 140, 32, signalColor, 700, "right");
       return canvas;
     }
 
     _render(report) {
-      const descriptions = {
-        low: "当前浏览器暴露的中国地区相关信号较少。",
-        medium: "当前浏览器暴露了部分中国地区相关信号。",
-        high: "当前浏览器暴露了较多中国地区相关信号。"
-      };
+      const copy = COPY[this.locale];
       this.shadowRoot.querySelector(".score").textContent =
         String(report.score).padStart(2, "0");
-      this.shadowRoot.querySelector(".band").textContent = report.band.label;
+      this.shadowRoot.querySelector(".band").textContent =
+        copy.bands[report.band.id] || report.band.label;
       this.shadowRoot.querySelector(".description").textContent =
-        descriptions[report.band.id];
+        copy.descriptions[report.band.id];
       this.shadowRoot.querySelector(".rail span").style.width =
         `${report.score}%`;
 
@@ -1055,13 +1265,13 @@
         const name = document.createElement("span");
         name.className = "name";
         const label = document.createElement("strong");
-        label.textContent = signal.label;
+        label.textContent = this._localizedSignalLabel(signal);
         const source = document.createElement("small");
         source.textContent = signal.source;
         name.append(label, source);
         const value = document.createElement("span");
         value.className = "value";
-        value.textContent = signal.value;
+        value.textContent = this._localizedSignalValue(signal.value);
         const points = document.createElement("span");
         points.className = "points";
         points.textContent = `+${signal.contribution}`;

@@ -6,38 +6,38 @@
   <meta name="description" content="Claude 环境信号检测内核与 Web Component 示例">
   <title>Claude Detector / 最小示例</title>
   <style>
-    :root { color-scheme: dark; font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    :root { color-scheme: light; font-family: "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #f5f1ea; background: #06111f; letter-spacing: 0; }
+    body { margin: 0; color: #1b2028; background: #f7f7f8; letter-spacing: 0; }
     main { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 56px 0 80px; }
     h1 { margin: 0 0 16px; font-size: clamp(30px, 7vw, 54px); line-height: 1; }
-    h1 span { color: #d97757; }
-    .intro { max-width: 620px; margin: 0 0 34px; color: #8ea5bc; font-size: 13px; line-height: 1.7; }
+    h1 .mark { color: #d97757; }
+    .intro { max-width: 620px; margin: 0 0 34px; color: #667085; font-size: 13px; line-height: 1.7; }
     claude-env-detector { margin-bottom: 42px; }
-    section { padding: 28px 0; border-top: 1px solid #24496b; }
+    section { padding: 28px 0; border-top: 1px solid #d7d9de; }
     h2 { margin: 0 0 14px; font-size: 15px; }
-    p { color: #8ea5bc; font-size: 11px; line-height: 1.7; }
-    pre { margin: 14px 0 0; padding: 16px; overflow: auto; border: 1px solid #24496b; color: #d97757; background: #0b1f33; font: inherit; font-size: 10px; line-height: 1.7; white-space: pre; }
+    p { color: #667085; font-size: 11px; line-height: 1.7; }
+    pre { margin: 14px 0 0; padding: 16px; overflow: auto; border: 1px solid #d7d9de; color: #b85d40; background: #ffffff; font: inherit; font-size: 10px; line-height: 1.7; white-space: pre; }
     code { font: inherit; }
   </style>
 </head>
 <body>
   <main>
-    <h1>检测内核<span>.</span></h1>
-    <p class="intro">这个页面只是最小集成示例。检测逻辑在独立内核中，组件负责显示；没有构建步骤或第三方网络请求，3D 渲染器只在检测时加载。</p>
+    <h1><span data-i18n="heading">检测内核</span><span class="mark">.</span></h1>
+    <p class="intro" data-i18n="intro">这个页面只是最小集成示例。检测逻辑在独立内核中，组件负责显示；没有构建步骤或第三方网络请求，3D 渲染器只在检测时加载。</p>
 
-    <claude-env-detector></claude-env-detector>
+    <claude-env-detector id="detector" locale="zh"></claude-env-detector>
 
     <section>
       <h2>Web Component</h2>
-      <p>加载两个脚本后，在任意 HTML、Vue、React 或其他框架中使用原生标签。</p>
+      <p data-i18n="componentText">加载两个脚本后，在任意 HTML、Vue、React 或其他框架中使用原生标签。</p>
       <pre><code>&lt;script src="/src/detector.js"&gt;&lt;/script&gt;
 &lt;script src="/src/claude-env-detector.js"&gt;&lt;/script&gt;
 &lt;claude-env-detector&gt;&lt;/claude-env-detector&gt;</code></pre>
     </section>
 
     <section>
-      <h2>只调用检测内核</h2>
+      <h2 data-i18n="coreTitle">只调用检测内核</h2>
       <pre><code>const report = ClaudeDetector.detectEnvironment();
 console.log(report.score, report.signals);</code></pre>
     </section>
@@ -54,5 +54,36 @@ console.log(report.score, report.signals);</code></pre>
 
   <script src="src/detector.js"></script>
   <script src="src/claude-env-detector.js"></script>
+  <script>
+    const pageCopy = {
+      zh: {
+        title: "Claude Detector / 最小示例",
+        description: "Claude 环境信号检测内核与 Web Component 示例",
+        heading: "检测内核",
+        intro: "这个页面只是最小集成示例。检测逻辑在独立内核中，组件负责显示；没有构建步骤或第三方网络请求，3D 渲染器只在检测时加载。",
+        componentText: "加载两个脚本后，在任意 HTML、Vue、React 或其他框架中使用原生标签。",
+        coreTitle: "只调用检测内核"
+      },
+      en: {
+        title: "Claude Detector / Minimal Example",
+        description: "Claude environment signal detector core and Web Component example",
+        heading: "Detector Core",
+        intro: "This page is a minimal integration example. Detection runs in an independent core while the component handles presentation. There is no build step or third-party network request, and the 3D renderer loads only when a scan starts.",
+        componentText: "Load two scripts, then use the native element in HTML, Vue, React, or another framework.",
+        coreTitle: "Use the detector core only"
+      }
+    };
+    const detector = document.getElementById("detector");
+    detector.addEventListener("claude-env-locale", (event) => {
+      const locale = event.detail.locale;
+      const copy = pageCopy[locale];
+      document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+      document.title = copy.title;
+      document.querySelector('meta[name="description"]').content = copy.description;
+      document.querySelectorAll("[data-i18n]").forEach((element) => {
+        element.textContent = copy[element.dataset.i18n];
+      });
+    });
+  </script>
 </body>
 </html>

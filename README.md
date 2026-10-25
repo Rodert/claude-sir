@@ -117,15 +117,27 @@ const blob = await detector.downloadResult();
 
 ```css
 claude-env-detector {
-  --detector-bg: #06111f;
-  --detector-surface: #0b1f33;
-  --detector-line: #24496b;
-  --detector-text: #f5f1ea;
-  --detector-muted: #8ea5bc;
+  --detector-bg: #f7f7f8;
+  --detector-surface: #ffffff;
+  --detector-line: #d7d9de;
+  --detector-text: #1b2028;
+  --detector-muted: #667085;
   --detector-accent: #d97757;
   --detector-blue: #2f7df6;
 }
 ```
+
+组件默认使用中文，可通过界面右上角切换 English，也可以由宿主设置 `locale` 属性或属性值：
+
+```html
+<claude-env-detector locale="en"></claude-env-detector>
+```
+
+```js
+detector.locale = "en";
+```
+
+切换后会触发 `claude-env-locale` 事件；检测过程、结果弹层和下载的分享图片都会使用当前语言。
 
 如需替换机器人素材，可直接设置组件属性，路径按宿主页面解析：
 
@@ -166,7 +178,7 @@ iframe.contentWindow.postMessage({ type: "claude-env-run" }, "*");
 
 ## 体积与许可
 
-- 检测内核约 7 KB，组件约 39 KB，随首屏加载。
+- 检测内核约 7 KB，组件约 47 KB，随首屏加载。
 - 两张机器人 WebP 合计约 69 KB，只在展示对应结果时加载其中一张。
 - Three.js 涡轮构建约 527 KB，gzip 后约 135 KB，仅在第一次检测时加载并由浏览器缓存。
 - Three.js 使用 MIT 许可证，许可文本见 `vendor/THREE-LICENSE.txt`。
