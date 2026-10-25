@@ -487,16 +487,11 @@
       }
       button:focus-visible { outline: 2px solid var(--detector-text); outline-offset: 2px; }
       .verdict {
-        position: absolute;
-        inset: 0;
-        z-index: 20;
-        display: grid;
-        place-items: center;
-        min-height: 100%;
-        padding: 24px;
+        position: relative;
+        padding: 12px 14px;
         overflow: hidden;
-        background: rgba(247, 247, 248, .88);
-        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--detector-line);
+        background: var(--detector-surface);
         opacity: 0;
         transition: opacity 220ms ease;
       }
@@ -504,15 +499,17 @@
       .verdict[data-open] { opacity: 1; }
       .verdict-card {
         position: relative;
-        width: min(430px, 100%);
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        width: 100%;
+        min-height: 112px;
         border: 1px solid var(--verdict-color, var(--detector-accent));
         background: var(--detector-surface);
-        box-shadow: 0 18px 48px rgba(27, 32, 40, .16);
-        transform: translateY(72px) scale(.72);
-        transform-origin: 50% 100%;
+        transform: translateY(-8px) scale(.985);
+        transform-origin: 50% 0;
         opacity: 0;
         transition:
-          transform 460ms cubic-bezier(.16, 1, .3, 1),
+          transform 360ms cubic-bezier(.16, 1, .3, 1),
           opacity 220ms ease;
       }
       .verdict[data-open] .verdict-card {
@@ -520,17 +517,18 @@
         opacity: 1;
       }
       .verdict[data-closing] .verdict-card {
-        transform: translateY(110px) scale(.12, .06);
+        transform: translateY(-8px) scale(.96);
         opacity: 0;
         transition-timing-function: cubic-bezier(.7, 0, .84, 0);
-        transition-duration: 320ms;
+        transition-duration: 240ms;
       }
       .verdict[data-pass] {
         --verdict-color: var(--detector-blue);
       }
       .verdict-image-wrap {
         position: relative;
-        aspect-ratio: 1;
+        width: 112px;
+        height: 112px;
         overflow: hidden;
         background: #edf5ff;
       }
@@ -552,13 +550,13 @@
       }
       .verdict-close {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 7px;
+        right: 7px;
         z-index: 2;
-        width: 38px;
-        height: 38px;
+        width: 30px;
+        height: 30px;
         padding: 0;
-        border: 1px solid rgba(245, 241, 234, .6);
+        border: 1px solid var(--detector-line);
         border-radius: 0;
         background: rgba(255, 255, 255, .94);
         color: var(--detector-text);
@@ -568,9 +566,9 @@
       .verdict-close::after {
         content: "";
         position: absolute;
-        left: 10px;
-        top: 17px;
-        width: 16px;
+        left: 8px;
+        top: 13px;
+        width: 12px;
         height: 2px;
         background: currentColor;
       }
@@ -583,17 +581,19 @@
       .verdict-copy {
         display: grid;
         grid-template-columns: 1fr auto;
-        align-items: end;
-        gap: 8px 20px;
-        padding: 18px 20px 20px;
-        border-top: 1px solid var(--verdict-color, var(--detector-accent));
+        align-content: center;
+        align-items: center;
+        gap: 7px 16px;
+        min-width: 0;
+        padding: 16px 48px 16px 18px;
+        border-left: 1px solid var(--verdict-color, var(--detector-accent));
       }
-      .verdict-title { font-size: 18px; }
+      .verdict-title { font-size: 15px; }
       .verdict-score {
         grid-row: 1 / 3;
         grid-column: 2;
         color: var(--verdict-color, var(--detector-accent));
-        font-size: 32px;
+        font-size: 26px;
         font-weight: 700;
         line-height: 1;
         font-variant-numeric: tabular-nums;
@@ -601,7 +601,7 @@
       .verdict-detail {
         margin: 0;
         color: var(--detector-muted);
-        font-size: 10px;
+        font-size: 9px;
       }
       @media (max-width: 440px) {
         .scan-stage { height: 430px; }
@@ -615,9 +615,13 @@
         .footer { align-items: flex-start; flex-direction: column; }
         .actions { width: 100%; }
         .run-button, .share-button { flex: 1 1 0; min-width: 0; }
-        .verdict { padding: 14px; }
-        .verdict-card { width: min(360px, 100%); }
-        .verdict-copy { padding: 14px 16px 16px; }
+        .verdict { padding: 10px; }
+        .verdict-card { grid-template-columns: 88px minmax(0, 1fr); min-height: 88px; }
+        .verdict-image-wrap { width: 88px; height: 88px; }
+        .verdict-copy { gap: 5px 10px; padding: 10px 38px 10px 12px; }
+        .verdict-title { font-size: 13px; }
+        .verdict-score { font-size: 20px; }
+        .verdict-detail { font-size: 8px; }
       }
       @media (prefers-reduced-motion: reduce) {
         .rail span, .scan-progress span { transition: none; }
@@ -660,19 +664,8 @@
           <p class="description">读取浏览器可见的六项环境数据，不调用 Claude。</p>
         </div>
       </div>
-      <ol class="signals" part="signals"></ol>
-      <footer class="footer" part="footer">
-        <p class="note">本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。</p>
-        <div class="actions">
-          <button class="share-button" type="button" part="share-button" disabled>
-            <span class="download-icon" aria-hidden="true"></span>
-            <span class="share-label">分享结果</span>
-          </button>
-          <button class="run-button" type="button" part="button">开始检测</button>
-        </div>
-      </footer>
       <div class="verdict" part="verdict" hidden>
-        <div class="verdict-card" role="dialog" aria-modal="true" aria-labelledby="verdict-title">
+        <div class="verdict-card" role="region" aria-labelledby="verdict-title">
           <button class="verdict-close" type="button" aria-label="关闭检测结果" title="关闭"></button>
           <div class="verdict-image-wrap">
             <img class="verdict-image" alt="" width="900" height="900">
@@ -685,6 +678,17 @@
           </div>
         </div>
       </div>
+      <ol class="signals" part="signals"></ol>
+      <footer class="footer" part="footer">
+        <p class="note">本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。</p>
+        <div class="actions">
+          <button class="share-button" type="button" part="share-button" disabled>
+            <span class="download-icon" aria-hidden="true"></span>
+            <span class="share-label">分享结果</span>
+          </button>
+          <button class="run-button" type="button" part="button">开始检测</button>
+        </div>
+      </footer>
     </section>
   `;
 
@@ -756,9 +760,6 @@
         });
       });
       this._verdictClose.addEventListener("click", () => this._hideVerdict());
-      this._verdict.addEventListener("click", (event) => {
-        if (event.target === this._verdict) this._hideVerdict();
-      });
       this._applyLocale();
     }
 
@@ -963,7 +964,6 @@
       document.addEventListener("keydown", this._onKeyDown);
       root.requestAnimationFrame(() => {
         this._verdict.setAttribute("data-open", "");
-        this._verdictClose.focus({ preventScroll: true });
       });
     }
 
@@ -995,7 +995,7 @@
       }
       this._verdict.setAttribute("data-closing", "");
       this._verdict.removeAttribute("data-open");
-      this._verdictTimer = root.setTimeout(finish, 340);
+      this._verdictTimer = root.setTimeout(finish, 260);
     }
 
     _renderScanItems(report, activeIndex) {
