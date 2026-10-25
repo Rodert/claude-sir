@@ -293,9 +293,10 @@
       }
       .scan-item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) minmax(90px, 1fr);
         align-items: center;
-        gap: 10px;
+        column-gap: 10px;
+        row-gap: 4px;
         min-height: 42px;
         padding: 7px 10px;
         color: var(--detector-muted);
@@ -305,6 +306,15 @@
       .scan-item-copy { display: grid; gap: 2px; min-width: 0; }
       .scan-item-name { color: var(--detector-text); font-size: 10px; }
       .scan-item-source { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .scan-item-outcome {
+        display: grid;
+        justify-items: end;
+        align-content: center;
+        gap: 3px;
+        min-width: 0;
+        min-height: 30px;
+        text-align: right;
+      }
       .scan-item-state {
         display: inline-flex;
         align-items: center;
@@ -318,6 +328,17 @@
         border: 1px solid var(--detector-line);
         background: var(--detector-surface);
       }
+      .scan-item-value {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 1.25em;
+        color: var(--detector-accent);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
+      .scan-item-value:empty { visibility: hidden; }
       .scan-item[data-state="active"] {
         background: rgba(217, 119, 87, .08);
       }
@@ -335,7 +356,14 @@
         border-color: var(--detector-accent);
         background: var(--detector-accent);
       }
+      .scan-item[data-state="done"] .scan-item-value {
+        animation: scan-value-in 240ms ease-out both;
+      }
       @keyframes scan-pulse { to { opacity: .28; } }
+      @keyframes scan-value-in {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
       .scan-label { font-size: 11px; font-weight: 700; }
       .scan-count {
         color: var(--detector-accent);
@@ -642,6 +670,7 @@
         font-size: 11px;
       }
       :host([full-viewport]) .scan-item-name { font-size: 13px; }
+      :host([full-viewport]) .scan-item-value { font-size: 12px; }
       :host([full-viewport]) .scan-hud {
         inset: auto clamp(18px, 3vw, 48px) clamp(18px, 3vw, 36px);
       }
@@ -770,6 +799,7 @@
         .rail span, .scan-progress span { transition: none; }
         .fallback-rotor { animation: none; }
         .scan-item[data-state="active"] .scan-item-state::before { animation: none; }
+        .scan-item[data-state="done"] .scan-item-value { animation: none; }
         .verdict, .verdict-card { transition: none; }
       }
     </style>
@@ -1162,10 +1192,19 @@
         source.textContent = signal.source;
         itemCopy.append(name, source);
 
+        const outcome = document.createElement("span");
+        outcome.className = "scan-item-outcome";
         const status = document.createElement("span");
         status.className = "scan-item-state";
         status.textContent = copy.scanStates[state];
-        item.append(itemCopy, status);
+        const value = document.createElement("span");
+        value.className = "scan-item-value";
+        if (state === "done") {
+          value.textContent = this._localizedSignalValue(signal.value);
+          value.title = value.textContent;
+        }
+        outcome.append(status);
+        item.append(itemCopy, outcome, value);
         this._scanItems.appendChild(item);
       });
     }
