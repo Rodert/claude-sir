@@ -615,11 +615,16 @@
       :host([full-viewport]) .header {
         min-height: 64px;
         padding-inline: clamp(18px, 3vw, 48px);
-        font-size: 14px;
+        font-size: 18px;
+      }
+      :host([full-viewport]) .locale-button {
+        min-width: 54px;
+        height: 34px;
+        font-size: 11px;
       }
       :host([full-viewport]) .privacy-bar span {
-        padding-block: 14px;
-        font-size: 10px;
+        padding-block: 15px;
+        font-size: 12px;
       }
       :host([full-viewport]) .scan-stage {
         flex: 1 1 auto;
@@ -629,61 +634,86 @@
       :host([full-viewport]) .scan-items {
         top: clamp(18px, 3vw, 40px);
         left: clamp(18px, 3vw, 48px);
-        width: min(340px, calc(100% - 36px));
+        width: min(390px, calc(100% - 36px));
       }
       :host([full-viewport]) .scan-item {
-        min-height: 48px;
-        padding-inline: 14px;
+        min-height: 52px;
+        padding-inline: 16px;
+        font-size: 11px;
       }
+      :host([full-viewport]) .scan-item-name { font-size: 13px; }
       :host([full-viewport]) .scan-hud {
         inset: auto clamp(18px, 3vw, 48px) clamp(18px, 3vw, 36px);
       }
+      :host([full-viewport]) .scan-label,
+      :host([full-viewport]) .scan-count { font-size: 14px; }
       :host([full-viewport]) .summary {
         flex: 1 1 230px;
         min-height: 210px;
       }
       :host([full-viewport]) .score-wrap {
         align-items: center;
+        gap: 16px;
         padding-inline: clamp(24px, 4vw, 64px);
       }
       :host([full-viewport]) .score {
-        font-size: clamp(76px, 10vw, 148px);
+        font-size: clamp(92px, 11vw, 168px);
       }
+      :host([full-viewport]) .out-of { font-size: 14px; }
       :host([full-viewport]) .result {
+        gap: 18px;
         padding-inline: clamp(24px, 4vw, 64px);
       }
-      :host([full-viewport]) .band { font-size: clamp(18px, 2vw, 28px); }
-      :host([full-viewport]) .description { font-size: 11px; }
+      :host([full-viewport]) .band { font-size: clamp(26px, 2.4vw, 36px); }
+      :host([full-viewport]) .description { font-size: 14px; line-height: 1.7; }
+      :host([full-viewport]) .rail { height: 4px; }
       :host([full-viewport]) .signals {
         flex: 1 1 auto;
         display: flex;
         flex-direction: column;
       }
+      :host([full-viewport]) .panel[data-scanning] .signals { display: none; }
       :host([full-viewport]) .signals:empty { flex-grow: 0; }
       :host([full-viewport]) .signal {
         flex: 1 1 62px;
         grid-template-columns: minmax(180px, .8fr) minmax(220px, 1.6fr) 84px;
         min-height: 58px;
-        font-size: 11px;
+        font-size: 14px;
       }
       :host([full-viewport]) .signal > span {
         display: flex;
         align-items: center;
         padding-inline: clamp(18px, 2vw, 32px);
       }
-      :host([full-viewport]) .name {
+      :host([full-viewport]) .signal > .name {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         align-content: center;
+        gap: 4px;
       }
+      :host([full-viewport]) .name small { font-size: 11px; }
+      :host([full-viewport]) .value { font-size: 13px; }
       :host([full-viewport]) .points {
         justify-content: flex-end;
         padding-inline: 16px;
+        font-size: 14px;
+        font-weight: 700;
         white-space: nowrap;
       }
       :host([full-viewport]) .footer {
         min-height: 76px;
         padding-inline: clamp(18px, 3vw, 48px);
       }
+      :host([full-viewport]) .note { max-width: 760px; font-size: 11px; }
+      :host([full-viewport]) .run-button,
+      :host([full-viewport]) .share-button {
+        min-width: 116px;
+        min-height: 42px;
+        font-size: 12px;
+      }
+      :host([full-viewport]) .verdict-title { font-size: 19px; }
+      :host([full-viewport]) .verdict-detail { font-size: 12px; }
+      :host([full-viewport]) .verdict-score { font-size: 32px; }
       @media (max-width: 440px) {
         .scan-stage { height: 430px; }
         .scan-items { width: calc(100% - 32px); }
@@ -704,19 +734,34 @@
         .verdict-score { font-size: 20px; }
         .verdict-detail { font-size: 8px; }
         :host([full-viewport]) .panel { height: auto; }
-        :host([full-viewport]) .header { min-height: 54px; padding-inline: 14px; }
-        :host([full-viewport]) .privacy-bar span { padding-block: 11px; font-size: 9px; }
-        :host([full-viewport]) .summary { min-height: 0; }
+        :host([full-viewport]) .header { min-height: 58px; padding-inline: 14px; font-size: 15px; }
+        :host([full-viewport]) .locale-button { min-width: 44px; height: 32px; font-size: 10px; }
+        :host([full-viewport]) .privacy-bar span { padding-block: 12px; font-size: 10px; }
+        :host([full-viewport]) .summary { flex: none; min-height: 0; }
         :host([full-viewport]) .score-wrap,
-        :host([full-viewport]) .result { padding: 24px 18px; }
-        :host([full-viewport]) .score { font-size: 72px; }
+        :host([full-viewport]) .result { padding: 28px 20px; }
+        :host([full-viewport]) .score { font-size: 88px; }
+        :host([full-viewport]) .out-of { font-size: 12px; }
+        :host([full-viewport]) .band { font-size: 24px; }
+        :host([full-viewport]) .description { font-size: 12px; }
         :host([full-viewport]) .signals { display: flex; }
         :host([full-viewport]) .signal {
-          grid-template-columns: minmax(100px, .8fr) minmax(100px, 1.2fr) 48px;
-          min-height: 55px;
+          grid-template-columns: 132px minmax(100px, 1fr) 50px;
+          min-height: 66px;
+          font-size: 12px;
         }
-        :host([full-viewport]) .signal > span { padding: 12px 14px; }
+        :host([full-viewport]) .signal > span { padding: 13px 12px; }
+        :host([full-viewport]) .signal > .name { gap: 3px; }
+        :host([full-viewport]) .name small { font-size: 9px; }
+        :host([full-viewport]) .value { font-size: 11px; }
+        :host([full-viewport]) .points { padding-inline: 10px; font-size: 12px; }
         :host([full-viewport]) .footer { min-height: 0; padding: 12px 14px; }
+        :host([full-viewport]) .note { font-size: 10px; }
+        :host([full-viewport]) .run-button,
+        :host([full-viewport]) .share-button { min-height: 42px; font-size: 12px; }
+        :host([full-viewport]) .verdict-title { font-size: 16px; }
+        :host([full-viewport]) .verdict-detail { font-size: 10px; }
+        :host([full-viewport]) .verdict-score { font-size: 24px; }
       }
       @media (max-height: 760px) {
         :host([full-viewport]) .panel { height: auto; }
