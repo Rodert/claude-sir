@@ -55,21 +55,27 @@
       }
       .header, .summary, .signal, .footer { display: flex; align-items: center; }
       .header {
-        justify-content: space-between;
         min-height: 48px;
         padding: 0 16px;
         border-bottom: 1px solid var(--detector-line);
         font-size: 12px;
         font-weight: 700;
       }
-      .local { color: var(--detector-muted); font-size: 10px; font-weight: 400; }
-      .local::before {
-        content: "";
-        display: inline-block;
-        width: 7px;
-        height: 7px;
-        margin-right: 8px;
-        background: var(--detector-accent);
+      .privacy-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-bottom: 1px solid var(--detector-line);
+        color: var(--detector-muted);
+        font-size: 9px;
+        line-height: 1.3;
+        text-align: center;
+      }
+      .privacy-bar span {
+        padding: 10px 6px;
+        overflow-wrap: anywhere;
+      }
+      .privacy-bar span + span {
+        border-left: 1px solid var(--detector-line);
       }
       .scan-stage {
         position: relative;
@@ -358,8 +364,12 @@
     <section class="panel" part="panel" aria-label="Claude 环境信号检测">
       <header class="header" part="header">
         <span>环境信号检测</span>
-        <span class="local">仅本地运行</span>
       </header>
+      <div class="privacy-bar" part="privacy" aria-label="隐私与开放性说明">
+        <span>浏览器内执行</span>
+        <span>不上传数据</span>
+        <span>开源代码</span>
+      </div>
       <div class="scan-stage" part="scan-stage" aria-live="polite">
         <canvas class="scan-canvas" aria-label="旋转的三维检测涡轮"></canvas>
         <div class="fallback-rotor" aria-hidden="true"></div>
@@ -382,7 +392,7 @@
       </div>
       <ol class="signals" part="signals"></ol>
       <footer class="footer" part="footer">
-        <p class="note">结果是环境相关性估算，不是 Claude 官方判定。</p>
+        <p class="note">本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。</p>
         <button class="run-button" type="button" part="button">开始检测</button>
       </footer>
       <div class="verdict" part="verdict" hidden>
