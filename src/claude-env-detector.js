@@ -30,6 +30,36 @@
   }
 
   const wait = (ms) => new Promise((resolve) => root.setTimeout(resolve, ms));
+
+  function loadImage(source) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Unable to load the result image."));
+      image.src = source;
+    });
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("Unable to create the result image."));
+      }, "image/png");
+    });
+  }
+
+  function fitText(context, value, maxWidth) {
+    const text = String(value);
+    if (context.measureText(text).width <= maxWidth) return text;
+    let output = text;
+    while (output.length && context.measureText(`${output}...`).width > maxWidth) {
+      output = output.slice(0, -1);
+    }
+    return `${output}...`;
+  }
+
   const template = document.createElement("template");
   template.innerHTML = `
     <style>
@@ -203,23 +233,69 @@
         padding: 10px 14px;
       }
       .note { margin: 0; color: var(--detector-muted); font-size: 9px; line-height: 1.5; }
-      .run-button {
+      .actions {
+        display: flex;
+        flex: none;
+        gap: 8px;
+      }
+      .run-button, .share-button {
         flex: none;
         min-width: 98px;
         min-height: 36px;
         padding: 0 14px;
-        border: 1px solid var(--detector-accent);
         border-radius: 0;
-        background: var(--detector-accent);
-        color: var(--detector-bg);
         font: inherit;
         font-size: 10px;
         font-weight: 700;
         letter-spacing: 0;
         cursor: pointer;
       }
+      .run-button {
+        border: 1px solid var(--detector-accent);
+        background: var(--detector-accent);
+        color: var(--detector-bg);
+      }
       .run-button:hover { background: transparent; color: var(--detector-accent); }
-      .run-button:disabled { cursor: wait; opacity: .5; }
+      .share-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: 1px solid var(--detector-blue);
+        background: transparent;
+        color: var(--detector-blue);
+      }
+      .share-button:hover { background: var(--detector-blue); color: var(--detector-text); }
+      .download-icon {
+        position: relative;
+        width: 12px;
+        height: 13px;
+        border-bottom: 1px solid currentColor;
+      }
+      .download-icon::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 0;
+        width: 1px;
+        height: 8px;
+        background: currentColor;
+      }
+      .download-icon::after {
+        content: "";
+        position: absolute;
+        left: 3px;
+        top: 4px;
+        width: 5px;
+        height: 5px;
+        border-right: 1px solid currentColor;
+        border-bottom: 1px solid currentColor;
+        transform: rotate(45deg);
+      }
+      .run-button:disabled, .share-button:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+      }
       button:focus-visible { outline: 2px solid var(--detector-text); outline-offset: 2px; }
       .verdict {
         position: absolute;
@@ -350,7 +426,8 @@
           grid-template-columns: minmax(100px, .8fr) minmax(100px, 1.2fr) 48px;
         }
         .footer { align-items: flex-start; flex-direction: column; }
-        .run-button { width: 100%; }
+        .actions { width: 100%; }
+        .run-button, .share-button { flex: 1 1 0; min-width: 0; }
         .verdict { padding: 14px; }
         .verdict-card { width: min(360px, 100%); }
         .verdict-copy { padding: 14px 16px 16px; }
@@ -393,7 +470,13 @@
       <ol class="signals" part="signals"></ol>
       <footer class="footer" part="footer">
         <p class="note">本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。</p>
-        <button class="run-button" type="button" part="button">开始检测</button>
+        <div class="actions">
+          <button class="share-button" type="button" part="share-button" disabled>
+            <span class="download-icon" aria-hidden="true"></span>
+            <span class="share-label">分享结果</span>
+          </button>
+          <button class="run-button" type="button" part="button">开始检测</button>
+        </div>
       </footer>
       <div class="verdict" part="verdict" hidden>
         <div class="verdict-card" role="dialog" aria-modal="true" aria-labelledby="verdict-title">
@@ -447,14 +530,18 @@
       this._stage = this.shadowRoot.querySelector(".scan-stage");
       this._canvas = this.shadowRoot.querySelector(".scan-canvas");
       this._button = this.shadowRoot.querySelector(".run-button");
+      this._shareButton = this.shadowRoot.querySelector(".share-button");
+      this._shareLabel = this.shadowRoot.querySelector(".share-label");
       this._verdict = this.shadowRoot.querySelector(".verdict");
       this._verdictImage = this.shadowRoot.querySelector(".verdict-image");
       this._verdictClose = this.shadowRoot.querySelector(".verdict-close");
       this._verdictTimer = 0;
+      this._sharePending = false;
       this._onKeyDown = (event) => {
         if (event.key === "Escape" && !this._verdict.hidden) this._hideVerdict();
       };
       this._button.addEventListener("click", () => this.run());
+      this._shareButton.addEventListener("click", () => this.downloadResult());
       this._verdictClose.addEventListener("click", () => this._hideVerdict());
       this._verdict.addEventListener("click", (event) => {
         if (event.target === this._verdict) this._hideVerdict();
@@ -482,12 +569,62 @@
       return this._pending;
     }
 
+    async downloadResult() {
+      if (!this._report || this._sharePending) return null;
+      this._sharePending = true;
+      this._shareButton.disabled = true;
+      this._shareLabel.textContent = "生成中";
+      try {
+        const report = this._report;
+        const passed = report.score === 100;
+        const robotSource = passed
+          ? this.getAttribute("blue-robot-src") || blueRobotUrl
+          : this.getAttribute("red-robot-src") || redRobotUrl;
+        let robot = null;
+        try {
+          robot = await loadImage(robotSource);
+        } catch (_) {
+          // Custom images may be unavailable or blocked by their origin.
+        }
+
+        let canvas = this._renderShareCanvas(report, robot);
+        let blob;
+        try {
+          blob = await canvasToBlob(canvas);
+        } catch (_) {
+          canvas = this._renderShareCanvas(report, null);
+          blob = await canvasToBlob(canvas);
+        }
+
+        const date = String(report.measuredAt || new Date().toISOString()).slice(0, 10);
+        const fileName = this.getAttribute("download-name") ||
+          `claude-sir-${report.score}-${date}.png`;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        root.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        this.dispatchEvent(new CustomEvent("claude-env-share", {
+          detail: { fileName, score: report.score },
+          bubbles: true,
+          composed: true
+        }));
+        return blob;
+      } finally {
+        this._sharePending = false;
+        this._shareButton.disabled = false;
+        this._shareLabel.textContent = "分享结果";
+      }
+    }
+
     async _execute() {
       if (!root.ClaudeDetector) {
         throw new Error("ClaudeDetector core must be loaded before the component.");
       }
       this._hideVerdict(true);
       this._button.disabled = true;
+      this._shareButton.disabled = true;
       this._button.textContent = "检测中";
       this._panel.setAttribute("data-scanning", "");
       this._stage.removeAttribute("data-webgl");
@@ -515,6 +652,7 @@
       this._render(report);
       this._showVerdict(report);
       this._button.disabled = false;
+      this._shareButton.disabled = false;
       this._button.textContent = "重新检测";
       this.dispatchEvent(new CustomEvent("claude-env-result", {
         detail: report,
@@ -703,6 +841,195 @@
       });
       this._sceneDisposables = [];
       this._stage.removeAttribute("data-webgl");
+    }
+
+    _renderShareCanvas(report, robot) {
+      const width = 1200;
+      const margin = 54;
+      const headerHeight = 96;
+      const privacyHeight = 68;
+      const summaryHeight = 380;
+      const rowHeight = 112;
+      const footerHeight = 180;
+      const rowsHeight = report.signals.length * rowHeight;
+      const height = margin * 2 + headerHeight + privacyHeight +
+        summaryHeight + rowsHeight + footerHeight;
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      const styles = getComputedStyle(this);
+      const color = (name, fallback) =>
+        styles.getPropertyValue(name).trim() || fallback;
+      const colors = {
+        bg: color("--detector-bg", "#06111f"),
+        surface: color("--detector-surface", "#0b1f33"),
+        line: color("--detector-line", "#24496b"),
+        text: color("--detector-text", "#f5f1ea"),
+        muted: color("--detector-muted", "#8ea5bc"),
+        accent: color("--detector-accent", "#d97757"),
+        blue: color("--detector-blue", "#2f7df6")
+      };
+      const passed = report.score === 100;
+      const signalColor = passed ? colors.blue : colors.accent;
+      const mono = '"SFMono-Regular", Consolas, "Liberation Mono", monospace';
+      const innerWidth = width - margin * 2;
+      const contentLeft = margin + 26;
+      const contentRight = width - margin - 26;
+      const drawLine = (x1, y1, x2, y2, lineWidth, stroke) => {
+        context.beginPath();
+        context.moveTo(x1, y1);
+        context.lineTo(x2, y2);
+        context.lineWidth = lineWidth || 1;
+        context.strokeStyle = stroke || colors.line;
+        context.stroke();
+      };
+      const drawText = (value, x, y, size, fill, weight, align) => {
+        context.font = `${weight || 400} ${size}px ${mono}`;
+        context.fillStyle = fill || colors.text;
+        context.textAlign = align || "left";
+        context.textBaseline = "alphabetic";
+        context.fillText(String(value), x, y);
+      };
+      const drawWrappedText = (value, x, y, maxWidth, lineHeight, maxLines) => {
+        const characters = Array.from(String(value));
+        const lines = [];
+        let line = "";
+        characters.forEach((character) => {
+          const next = line + character;
+          if (line && context.measureText(next).width > maxWidth) {
+            lines.push(line);
+            line = character;
+          } else {
+            line = next;
+          }
+        });
+        if (line) lines.push(line);
+        lines.slice(0, maxLines).forEach((item, index) => {
+          const lastVisible = index === maxLines - 1 && lines.length > maxLines;
+          context.fillText(
+            lastVisible ? fitText(context, `${item}...`, maxWidth) : item,
+            x,
+            y + index * lineHeight
+          );
+        });
+      };
+
+      context.fillStyle = colors.bg;
+      context.fillRect(0, 0, width, height);
+      context.save();
+      context.globalAlpha = 0.22;
+      for (let x = 0; x <= width; x += 48) drawLine(x, 0, x, height, 1, colors.line);
+      for (let y = 0; y <= height; y += 48) drawLine(0, y, width, y, 1, colors.line);
+      context.restore();
+
+      context.fillStyle = colors.bg;
+      context.fillRect(margin, margin, innerWidth, height - margin * 2);
+      context.strokeStyle = colors.line;
+      context.lineWidth = 2;
+      context.strokeRect(margin, margin, innerWidth, height - margin * 2);
+
+      const headerBottom = margin + headerHeight;
+      drawText("CLAUDE SIR", contentLeft, margin + 60, 28, colors.text, 700);
+      let measuredAt = "";
+      const measuredDate = new Date(report.measuredAt || "");
+      if (!Number.isNaN(measuredDate.getTime())) {
+        measuredAt = measuredDate.toLocaleString("zh-CN", { hour12: false });
+      }
+      drawText(measuredAt, contentRight, margin + 58, 18, colors.muted, 400, "right");
+      drawLine(margin, headerBottom, width - margin, headerBottom, 2);
+
+      const privacyBottom = headerBottom + privacyHeight;
+      const privacyLabels = ["浏览器内执行", "不上传数据", "开源代码"];
+      const privacyCellWidth = innerWidth / privacyLabels.length;
+      privacyLabels.forEach((label, index) => {
+        const cellLeft = margin + index * privacyCellWidth;
+        if (index) drawLine(cellLeft, headerBottom, cellLeft, privacyBottom, 1);
+        drawText(
+          label,
+          cellLeft + privacyCellWidth / 2,
+          headerBottom + 43,
+          18,
+          colors.muted,
+          400,
+          "center"
+        );
+      });
+      drawLine(margin, privacyBottom, width - margin, privacyBottom, 2);
+
+      const summaryBottom = privacyBottom + summaryHeight;
+      context.fillStyle = colors.surface;
+      context.fillRect(margin, privacyBottom, innerWidth, summaryHeight);
+      drawText("环境信号检测报告", contentLeft, privacyBottom + 60, 24, colors.text, 700);
+      drawText(String(report.score).padStart(2, "0"), contentLeft, privacyBottom + 218, 144, signalColor, 700);
+      drawText("/100", contentLeft + 345, privacyBottom + 216, 28, colors.muted, 400);
+      drawText(report.band.label, contentLeft, privacyBottom + 286, 27, colors.text, 700);
+      drawText(passed ? "满分通过" : "未通过", contentLeft + 180, privacyBottom + 286, 24, signalColor, 700);
+      context.fillStyle = colors.line;
+      context.fillRect(contentLeft, privacyBottom + 324, 600, 5);
+      context.fillStyle = signalColor;
+      context.fillRect(contentLeft, privacyBottom + 324, 600 * report.score / 100, 5);
+
+      const robotSize = 310;
+      const robotX = contentRight - robotSize;
+      const robotY = privacyBottom + 34;
+      context.fillStyle = colors.bg;
+      context.fillRect(robotX, robotY, robotSize, robotSize);
+      if (robot) {
+        context.drawImage(robot, robotX, robotY, robotSize, robotSize);
+      } else {
+        drawText(
+          passed ? "满分通过" : "未通过",
+          robotX + robotSize / 2,
+          robotY + robotSize / 2 + 10,
+          28,
+          signalColor,
+          700,
+          "center"
+        );
+      }
+      context.strokeStyle = signalColor;
+      context.lineWidth = 2;
+      context.strokeRect(robotX, robotY, robotSize, robotSize);
+      drawLine(margin, summaryBottom, width - margin, summaryBottom, 2);
+
+      report.signals.forEach((signal, index) => {
+        const rowTop = summaryBottom + index * rowHeight;
+        const rowBottom = rowTop + rowHeight;
+        const valueX = margin + 390;
+        const pointsX = width - margin - 132;
+        drawText(signal.label, contentLeft, rowTop + 44, 22, colors.text, 700);
+        drawText(signal.source, contentLeft, rowTop + 78, 16, colors.muted, 400);
+        context.font = `400 18px ${mono}`;
+        drawText(
+          fitText(context, signal.value, pointsX - valueX - 42),
+          valueX + 26,
+          rowTop + 64,
+          18,
+          colors.muted,
+          400
+        );
+        drawText(`+${signal.contribution}`, contentRight, rowTop + 65, 23, signalColor, 700, "right");
+        drawLine(valueX, rowTop, valueX, rowBottom, 1);
+        drawLine(pointsX, rowTop, pointsX, rowBottom, 1);
+        drawLine(margin, rowBottom, width - margin, rowBottom, 1);
+      });
+
+      const footerTop = summaryBottom + rowsHeight;
+      context.font = `400 18px ${mono}`;
+      context.fillStyle = colors.muted;
+      context.textAlign = "left";
+      drawWrappedText(
+        "本结果基于公开资料与浏览器可见信号推算，仅供参考，不代表 Claude 官方判定。出现偏差时，欢迎反馈和吐槽。",
+        contentLeft,
+        footerTop + 57,
+        innerWidth - 52,
+        30,
+        2
+      );
+      drawText("开源环境信号检测", contentLeft, footerTop + 137, 17, colors.muted, 400);
+      drawText(`${report.score}/100`, contentRight, footerTop + 140, 32, signalColor, 700, "right");
+      return canvas;
     }
 
     _render(report) {

@@ -99,6 +99,14 @@ index.html                  最小集成示例
 
 `run()` 返回 `Promise<Report>`。检测期间组件显示全宽 3D 涡轮，六项信号读取完成后切换为结果视图，并在中央弹出机器人判定：只有 `score === 100` 才举蓝旗，其余分数均举红旗。弹层可用关闭按钮、背景点击或 `Esc` 收回。
 
+检测完成后可点击“分享结果”，组件会在浏览器内将得分、判定、机器人和全部信号绘制成一张 PNG 并直接下载，不会上传数据。宿主代码也可以主动调用：
+
+```js
+const blob = await detector.downloadResult();
+```
+
+默认文件名为 `claude-sir-分数-日期.png`，可通过 `download-name` 属性覆盖。下载成功后组件会触发 `claude-env-share` 事件，其 `detail` 包含 `fileName` 和 `score`。
+
 支持 `auto` 属性自动检测：
 
 ```html
@@ -158,7 +166,7 @@ iframe.contentWindow.postMessage({ type: "claude-env-run" }, "*");
 
 ## 体积与许可
 
-- 检测内核约 7 KB，组件约 26 KB，随首屏加载。
+- 检测内核约 7 KB，组件约 39 KB，随首屏加载。
 - 两张机器人 WebP 合计约 69 KB，只在展示对应结果时加载其中一张。
 - Three.js 涡轮构建约 527 KB，gzip 后约 135 KB，仅在第一次检测时加载并由浏览器缓存。
 - Three.js 使用 MIT 许可证，许可文本见 `vendor/THREE-LICENSE.txt`。
@@ -170,3 +178,9 @@ python3 -m http.server 4173
 ```
 
 打开 `http://localhost:4173`。
+
+## GitHub Pages 部署
+
+推送到 `main` 分支后，[Deploy to GitHub Pages](.github/workflows/deploy-pages.yml) 工作流会自动发布整个纯静态站点，也可以在 GitHub Actions 页面手动运行。项目不需要构建命令或额外密钥。
+
+默认站点地址：`https://rodert.github.io/claude-sir/`
