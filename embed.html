@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>环境信号检测</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #06111f; }
+    claude-env-detector { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <claude-env-detector id="detector"></claude-env-detector>
+  <script src="src/detector.js"></script>
+  <script src="src/claude-env-detector.js"></script>
+  <script>
+    const detector = document.getElementById("detector");
+    detector.addEventListener("claude-env-result", (event) => {
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: "claude-env-result",
+          report: event.detail
+        }, "*");
+      }
+    });
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "claude-env-run") detector.run();
+    });
+  </script>
+</body>
+</html>
