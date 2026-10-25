@@ -30,11 +30,11 @@
 
 ```text
 src/detector.js             检测与评分，无 UI
-src/claude-env-detector.js  原生 Web Component 与结果弹层
+src/claude-env-detector.js  原生 Web Component 与结果视图
 assets/robots/              红旗、蓝旗机器人 WebP 素材
 vendor/three-turbine.min.js 按需加载的 3D 涡轮渲染器
 embed.html                  iframe 入口
-index.html                  最小集成示例
+index.html                  全屏检测页面与集成示例
 ```
 
 运行时没有包管理器、构建步骤、外部字体或第三方网络请求。普通静态文件服务器即可部署。组件只在用户开始检测后加载随项目发布的 Three.js 涡轮渲染器，不影响首屏。
@@ -111,6 +111,12 @@ const blob = await detector.downloadResult();
 
 ```html
 <claude-env-detector auto></claude-env-detector>
+```
+
+需要让组件自适应填满浏览器首屏时，可增加 `full-viewport` 属性。宽屏结果会收纳在一屏内，窄屏内容超过视口后自然滚动：
+
+```html
+<claude-env-detector full-viewport></claude-env-detector>
 ```
 
 组件使用 Shadow DOM，不污染宿主页面。可通过 CSS 变量调整颜色：

@@ -603,6 +603,87 @@
         color: var(--detector-muted);
         font-size: 9px;
       }
+      :host([full-viewport]) {
+        min-height: 100svh;
+      }
+      :host([full-viewport]) .panel {
+        display: flex;
+        flex-direction: column;
+        height: 100svh;
+        min-height: 100svh;
+      }
+      :host([full-viewport]) .header {
+        min-height: 64px;
+        padding-inline: clamp(18px, 3vw, 48px);
+        font-size: 14px;
+      }
+      :host([full-viewport]) .privacy-bar span {
+        padding-block: 14px;
+        font-size: 10px;
+      }
+      :host([full-viewport]) .scan-stage {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 430px;
+      }
+      :host([full-viewport]) .scan-items {
+        top: clamp(18px, 3vw, 40px);
+        left: clamp(18px, 3vw, 48px);
+        width: min(340px, calc(100% - 36px));
+      }
+      :host([full-viewport]) .scan-item {
+        min-height: 48px;
+        padding-inline: 14px;
+      }
+      :host([full-viewport]) .scan-hud {
+        inset: auto clamp(18px, 3vw, 48px) clamp(18px, 3vw, 36px);
+      }
+      :host([full-viewport]) .summary {
+        flex: 1 1 230px;
+        min-height: 210px;
+      }
+      :host([full-viewport]) .score-wrap {
+        align-items: center;
+        padding-inline: clamp(24px, 4vw, 64px);
+      }
+      :host([full-viewport]) .score {
+        font-size: clamp(76px, 10vw, 148px);
+      }
+      :host([full-viewport]) .result {
+        padding-inline: clamp(24px, 4vw, 64px);
+      }
+      :host([full-viewport]) .band { font-size: clamp(18px, 2vw, 28px); }
+      :host([full-viewport]) .description { font-size: 11px; }
+      :host([full-viewport]) .signals {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+      }
+      :host([full-viewport]) .signals:empty { flex-grow: 0; }
+      :host([full-viewport]) .signal {
+        flex: 1 1 62px;
+        grid-template-columns: minmax(180px, .8fr) minmax(220px, 1.6fr) 84px;
+        min-height: 58px;
+        font-size: 11px;
+      }
+      :host([full-viewport]) .signal > span {
+        display: flex;
+        align-items: center;
+        padding-inline: clamp(18px, 2vw, 32px);
+      }
+      :host([full-viewport]) .name {
+        display: grid;
+        align-content: center;
+      }
+      :host([full-viewport]) .points {
+        justify-content: flex-end;
+        padding-inline: 16px;
+        white-space: nowrap;
+      }
+      :host([full-viewport]) .footer {
+        min-height: 76px;
+        padding-inline: clamp(18px, 3vw, 48px);
+      }
       @media (max-width: 440px) {
         .scan-stage { height: 430px; }
         .scan-items { width: calc(100% - 32px); }
@@ -622,6 +703,23 @@
         .verdict-title { font-size: 13px; }
         .verdict-score { font-size: 20px; }
         .verdict-detail { font-size: 8px; }
+        :host([full-viewport]) .panel { height: auto; }
+        :host([full-viewport]) .header { min-height: 54px; padding-inline: 14px; }
+        :host([full-viewport]) .privacy-bar span { padding-block: 11px; font-size: 9px; }
+        :host([full-viewport]) .summary { min-height: 0; }
+        :host([full-viewport]) .score-wrap,
+        :host([full-viewport]) .result { padding: 24px 18px; }
+        :host([full-viewport]) .score { font-size: 72px; }
+        :host([full-viewport]) .signals { display: flex; }
+        :host([full-viewport]) .signal {
+          grid-template-columns: minmax(100px, .8fr) minmax(100px, 1.2fr) 48px;
+          min-height: 55px;
+        }
+        :host([full-viewport]) .signal > span { padding: 12px 14px; }
+        :host([full-viewport]) .footer { min-height: 0; padding: 12px 14px; }
+      }
+      @media (max-height: 760px) {
+        :host([full-viewport]) .panel { height: auto; }
       }
       @media (prefers-reduced-motion: reduce) {
         .rail span, .scan-progress span { transition: none; }
